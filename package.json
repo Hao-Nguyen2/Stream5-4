@@ -2,7 +2,7 @@
   "name": "p2p",
   "version": "1.0.0",
   "engines": {
-    "node": "v14.15.4"
+    "node": "20,x"
   },
   "description": "Peer to Peer WebRTC using Socket.io for signalling and WebRTC for Communication",
   "main": "server.js",
