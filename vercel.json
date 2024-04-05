@@ -1,16 +1,24 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "./server.js",
-      "use": "@vercel/node"
+    "version": 2,
+    "builds": [
+      {
+        "src": "package.json",
+        "use": "@vercel/node"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "/index.html"
+      }
+    ],
+    "env": {
+      "API_SECRET": "@api_secret"
+    },
+    "build": {
+      "env": {
+        "API_SECRET": "@api_secret"
+      }
     }
-  ],
-  "routes": [
-    
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ]
-}
+  }
+  
