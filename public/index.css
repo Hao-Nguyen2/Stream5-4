@@ -305,3 +305,16 @@ video {
     font-size: 2em;
     z-index: 1000;
 }
+
+#localVideo {
+    -webkit-transform: rotateY(180deg);
+    transform: rotateY(180deg);
+  }
+  
+  #peerVideo {
+    -webkit-transform: rotateY(180deg);
+    transform: rotateY(180deg);
+  }
+  
+
+  
