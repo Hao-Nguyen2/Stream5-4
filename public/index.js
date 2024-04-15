@@ -1,7 +1,7 @@
-// make socket connection
+// thiet lap ket noi socket
 const SOCKET = io();
 
-// connection info holder
+// thong tin ket noi
 let receivingCall = [];
 let activeCall = { 
     state: 'empty',
@@ -11,7 +11,7 @@ let activeCall = {
     myStream: null
 };
 
-// RTC configurations
+// thiet lap RTC
 let config = {
     iceServers: [
         {
@@ -20,7 +20,7 @@ let config = {
     ]
 };
 
-// frequently used DOM elements
+
 let localVideo = document.getElementById('localVideo');
 let peerVideo = document.getElementById('peerVideo');
 let home = document.getElementById('home');
@@ -31,6 +31,7 @@ let callContainer = document.getElementById('callContainer');
 let ringerName = document.getElementById('ringer-name');
 let ringerWarning = document.getElementById('ringer-warning');
 
+//ket thuc cuoc goi
 document.getElementById("end").addEventListener("click", () => {
     if (activeCall.roomId != null) {
         let detail = {
@@ -43,10 +44,10 @@ document.getElementById("end").addEventListener("click", () => {
     };
 });
 
-// set initial view to home
+// tro ve trang chu
 handleView("home");
 
-// call event listener
+// khoi tao cuoc goi
 document.getElementById('call').addEventListener('click', () => {    
     let callTo = document.getElementById('connectWith').value;
     callTo = callTo.trim();
@@ -56,6 +57,7 @@ document.getElementById('call').addEventListener('click', () => {
     activeCall.peer = callTo;
 });
 
+//xu ly phan hoi cuoc goi
 SOCKET.on('ack', (receivedPayload) => {
     receivedPayload = JSON.parse(receivedPayload);
     console.log("Acknowledgement: " + receivedPayload.status);
@@ -73,10 +75,10 @@ SOCKET.on('ack', (receivedPayload) => {
 
     } else if (receivedPayload.status == "calling") {
         if (activeCall.state == "precall") {
-            // update activeCall
+         
             activeCall.state = "calling";  
             activeCall.instance = new RTCPeerConnection(config); 
-            // display call card
+            
             callerP.innerHTML = "calling " + activeCall.peer;
             callerP.style.color = "black";     
             handleView("caller");
@@ -84,6 +86,7 @@ SOCKET.on('ack', (receivedPayload) => {
     };
 });
 
+//xu ly tu choi ket thuc cuoc goi
 SOCKET.on('rejected', (receivedPayload) => {
     if (activeCall.state == "calling") {
         console.log("Call rejected by " + activeCall.peer);
@@ -99,7 +102,7 @@ SOCKET.on('rejected', (receivedPayload) => {
 SOCKET.on('call', (receivedPayload) => {
     receivedPayload = JSON.parse(receivedPayload);
     console.log("Receiving call from " + receivedPayload.from);
-    // check if a call is active or not
+    // kiem tra trang thai cuoc goi 
     if (activeCall.state != "empty") {
         // user on other call
         // show pop up with options 
@@ -120,53 +123,53 @@ SOCKET.on('offer', async (receivedPayload) => {
 
     if (activeCall.state == "calling") {
 
-        // display container for local and peer videos 
+        // chuyen sang giao dien video 
         handleView("callContainer");
 
-        // on receiving tracks
+        //hien thi video 
         let peerVideo = document.getElementById('peerVideo');
         activeCall.instance.addEventListener('track', ({streams: [stream]}) => {
-            // display on peer video element
+            
             console.log("Track received from peer");
             peerVideo.srcObject = stream;
         });
 
-        // set remote desc 
+        // thiet lap mo ta
         console.log("Setting remote description");
         await activeCall.instance.setRemoteDescription(receivedPayload.offer);
 
-        // add tracks 
+        // them tracks 
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: true, 
-            video: { width: 300, height: 700, facingMode: "user"}
+            video: { width: 300, height: 600, facingMode: "user"}
         });
         activeCall.myStream = stream;
 
-        // display local stream
+        
         let localVideo = document.getElementById('localVideo');
         localVideo.srcObject = stream;
 
-        // add stream to RTC connection
+        
         stream.getTracks().forEach(track => activeCall.instance.addTrack(track, stream));
 
-        // ice candidate event handler
+       
         console.log("Setting ice candidate handler");
         activeCall.instance.onicecandidate = e => {
             console.log("New Ice candidate emitted.");
-            // emit ice candidate to room
+            
             SOCKET.emit('iceCandidate', JSON.stringify({
                 roomId: receivedPayload.roomId,
                 ICE: e.candidate
             }));
         };
 
-        // create answer
+        // tao phan hoi
         console.log("creating answer");
         let answer = await activeCall.instance.createAnswer();
         console.log("Setting local description");
         activeCall.instance.setLocalDescription(answer);
 
-        // emit answer to room
+        
         console.log("sending answer");
         SOCKET.emit('answer', (JSON.stringify({
             roomId: receivedPayload.roomId,
@@ -176,9 +179,10 @@ SOCKET.on('offer', async (receivedPayload) => {
     };
 });
 
-// remote peer sends new ice candidates - add them 
+// them ICE vao ket noi
 SOCKET.on('remoteIceCandidate', async (receivedPayload) => {
     receivedPayload = JSON.parse(receivedPayload);
+    //kiem tra thiet lap mo ta
     if (activeCall.instance.remoteDescription != null) {
         await activeCall.instance.addIceCandidate(receivedPayload.ICE);
     } else {
@@ -187,43 +191,44 @@ SOCKET.on('remoteIceCandidate', async (receivedPayload) => {
     console.log("Ice candidate received from peer and added to connection.");
 });
 
+//xu ly chap nhan cuoc cgoi
 async function acceptCall(callData) {
-    // display video containers and hide ringer containers
+    // hien thi giao dien video va an giao dien cuoc goi den
     handleView("callContainer");
     document.getElementById("ringer-container").style.left = "-100%";
 
-    // update active call data
+    // cap nhat du lieu cuoc goi
     activeCall.state = 'pending';
     activeCall.from = callData.from,
     activeCall.roomId = callData.id,
 
     console.log("Call accepted from " + callData.from);
     
-    // add connection instance to activeCall
+    // them ket noi 
     activeCall.instance = new RTCPeerConnection(config);;
 
-    // fetch media streams here
+    // nap luong du lieu
     const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: 300, height: 700, facingMode: "user"}
+        video: { width: 300, height: 600, facingMode: "user"}
     });
     activeCall.myStream = stream;
-    // display local stream
+    
     localVideo.srcObject = stream;
 
-    // add stream to RTC connection
+    // them luong vao ket noi RTC
     stream.getTracks().forEach(track => activeCall.instance.addTrack(track, stream));
 
-    // on receiving tracks
+    // hien thi phan tu video cua nguoi doi dien
     activeCall.instance.addEventListener('track', ({streams: [stream]}) => {
-        // display on peer video element
+       
         console.log("Track received from peer");
         peerVideo.srcObject = stream;
     });
 
-    // local connection finds new ice candidates
+    
     activeCall.instance.onicecandidate = e => {
-        // emit ice candidate to room
+        
         console.log("New Ice candidate emitted.");
         SOCKET.emit('iceCandidate', JSON.stringify({
             roomId: callData.id,
@@ -231,22 +236,22 @@ async function acceptCall(callData) {
         }));
     };
 
-    // create offer
+    // tao de nghi cuoc goi
     let offer = await activeCall.instance.createOffer({
         offerToReceiveAudio: 1,
         offerToReceiveVideo: 1
     });
 
-    // set it as local description
+    // thiet lap mo ta de nghi
     await activeCall.instance.setLocalDescription(offer);
 
-    // send offer to remote peer
+    // gui den nguoi dung kia 
     SOCKET.emit('offer', (JSON.stringify({
         roomId: callData.id,
         offer: offer
     })));
 
-    // received answer from peer
+    // xu ly cau tra loi cua nguoi dung
     SOCKET.on('answer', async (receivedPayload) => {
         receivedPayload = JSON.parse(receivedPayload);
         console.log("Answer received from " + receivedPayload.roomId);
@@ -259,42 +264,43 @@ async function acceptCall(callData) {
     });
 };
 
-// reject call
+// xu ly tu choi cuoc goi
 function rejectCall(callData) {
     console.log("Rejecting call.");
+    //xoa nguoi goi khoi ds cuoc goi
     receivingCall.splice(receivingCall.indexOf(callData.from), 1);
     SOCKET.emit('callReject', JSON.stringify({roomId: callData.roomId}));
     if (activeCall.instance != null) {
-        // ongoing call is getting ended
+        // dong ket noi 
         activeCall.instance.close();
     };
     resetCallData();
 };
 
-// display call details on page
+// hien thi cuoc goi den 
 function showCallUI(receivedPayload) {
-    // update caller name
+    // thong bao cuoc goi tu ten cua nguoi goi
     ringerName.innerHTML = receivedPayload.from + " calling..";
 
-    // update accept button 
+    // chap nhan cuoc goi 
     let acceptBtn = document.getElementById("acceptBtn");
     acceptBtn.addEventListener('click', () => {
         clearInterval(ringerInterval);
         acceptCall(receivedPayload);
     });
 
-    // update reject button
+    // tu choi cuoc goi
     let rejectBtn = document.getElementById('rejectBtn');
     rejectBtn.addEventListener('click', () => {
-        // hide ringer container
+        
         document.getElementById("ringer-container").style.left = "-100%";
         rejectCall(receivedPayload);
     });
 
-    // show Call UI and start timer
+    // hien thi giao dien cuoc goi
     document.getElementById("ringer-container").style.left = "0%";
 
-    // set interval for ringer timer
+    // dem thoi gian chuong cuoc goi den 
     let i = 19;
     ringerInterval = setInterval(() => {
         i = i - 1;
@@ -308,6 +314,7 @@ function showCallUI(receivedPayload) {
     }, 1000);    
 };
 
+//chi tiet cuoc goi
 function getCallDetail() {
     console.log("Active Call details are: ");
     console.log("State: " + activeCall.state);
@@ -315,6 +322,7 @@ function getCallDetail() {
     console.log("Instance: " + activeCall.instance);
 };
 
+//xu ly chuyen doi giao dien
 function handleView(element_to_lift) {
 
     if (element_to_lift == "caller") {
@@ -335,6 +343,7 @@ function handleView(element_to_lift) {
 
 };
 
+//thiet lap lai trang thai cuoc goi
 function resetCallData() {
     activeCall.state = 'empty';
     if (activeCall.instance != null) {

@@ -1,14 +1,14 @@
 
-// this file includes all functions
+// xu ly chuoi
 function validateString(aString) {
-    astring = aString.toLowerCase();
+    aString = aString.toLowerCase();
     aString = aString.trim();
-    // also use regex to validate further
+ 
     return aString;
 };
 
 function isUserOnline(usernameToCheck, onlineUsers) {
-    // get usernameToCheck's record from onlineUsers
+    // kiem tra nguoi dung truc tuyen
     let userOnline = onlineUsers.find(user => user.username == usernameToCheck);
     if (userOnline != undefined) {
         if (userOnline.username == usernameToCheck) {
@@ -16,7 +16,7 @@ function isUserOnline(usernameToCheck, onlineUsers) {
         };
         return false;
     }; 
-    // record does not exist
+    
     return false;
 };
 

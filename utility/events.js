@@ -6,40 +6,39 @@ const { v4: uuidv4 } = require('uuid');
 let onlineUsers = [];
 let allRooms = [];
 
-// main handler for socket connection
+// xu ly ket noi socket
 function connectionEvent(socket, SignalSocket) {
     let thisUser = goOnline(socket);
 
-    // call forwarding event
+    // bat dau cuoc goi
     socket.on("forwardCall", receivedPayload => forwardCall(socket, receivedPayload, thisUser));
 
-    // offer event
+    // thiet lap cuoc goi
     socket.on('offer', receivedPayload => forwardOffer(socket, receivedPayload));
 
-    // answer event
+    // phan hoi cuoc goi
     socket.on('answer', receivedPayload => forwardAnswer(socket, receivedPayload));
 
-    // ice candidate event
+    // trao doi thong tin 
     socket.on('iceCandidate', receivedPayload => forwardIceCandidate(socket, receivedPayload));
 
-    // call rejection event
+    // tu choi tiep nhan cuoc goi
     socket.on('callReject', receivedPayload => endCall(socket, receivedPayload));
 
-    // disconnecting event
+    // ngat ket noi
     socket.on("disconnecting", () => disconnecting(socket));
 
-    // disconnect event
     socket.on("disconnect", cause => console.log("Socket Disconnected due to " + cause));
 };
 
-// socket events functions -----------------------------------------------E V E N T S------
+
 function forwardCall(socket, receivedPayload, thisUser) {
-    // parse and validate received payload
+    //phan tich va xac thuc du lieu dau vao
     receivedPayload = JSON.parse(receivedPayload);
     receivedPayload.to = UTILS.validateString(receivedPayload.to);
     console.log("Calling " + receivedPayload.to + " from " + thisUser.username);
 
-    // if receiver is offline, exit with ack to call initiator 
+    // kiem tra nguoi nhan truc tuyen 
     let callReceiver = UTILS.isUserOnline(receivedPayload.to, onlineUsers);
     if(!callReceiver) {
         sendAck(socket, `receiver offline`);
@@ -47,47 +46,47 @@ function forwardCall(socket, receivedPayload, thisUser) {
     };
     sendAck(socket, `calling`);
 
-    // receiver is online
+    // nguoi nhan truc tuyen
     console.log(receivedPayload.to + " is Online. Creating room with it");
 
-    // create room and add call initiator and receiver in it.
+    // tao phong va them thanh vien
     let room = {
         roomId: uuidv4(),
         members: [thisUser.username, callReceiver.username]
     };
 
     console.log("Room created with roomID: " + room.roomId);
-    // adding room to allRooms list
+    
     allRooms.push(room);
 
-    // make this user join room
+    // moi nguoi dung tham gia phong
     socket.join(room.roomId);
-    // update this user's record in allUsers
+    // cap nhat trang thai tham gia phong
     let userRecord = onlineUsers.find(user => user.username == thisUser.username);
     onlineUsers[onlineUsers.indexOf(userRecord)].roomJoined = room.roomId;
     
-    // make call receiver join the room
+    // nguoi nhan duoc them vao phong
     callReceiver.socket.join(room.roomId);
-    // update this user's record in allUsers
+    // cap nhat trang thai tham gia phong cua cac user
     userRecord = onlineUsers.find(user => user.username == callReceiver.username);
     onlineUsers[onlineUsers.indexOf(userRecord)].roomJoined = room.roomId;
 
     sendAck(socket, `Room ${room.roomId}`);
     sendAck(socket, `Waiting for ${callReceiver.username}'s response`);
 
-    // emit call event to call receiver
+    // kich hoat cuoc goi
     socket.to(room.roomId).emit("call", (JSON.stringify({
         from: thisUser.username, id: room.roomId
     })));
 };
 
-// function to handle offer event
+
 function forwardOffer(socket, receivedPayload) {
     receivedPayload = JSON.parse(receivedPayload);
-    // forward the offer to other person in room
+    
     console.log("Request received to forward OFFER in room: " + receivedPayload.roomId);
 
-    //check if this room Id exists
+    //kiem tra ton tai cua phong 
     if ((allRooms.find(room => room.roomId == receivedPayload.roomId)) != undefined) {
         socket.to(receivedPayload.roomId).emit('offer', (JSON.stringify(receivedPayload)));
         console.log("Offer forwarded into room.");
@@ -97,14 +96,13 @@ function forwardOffer(socket, receivedPayload) {
     };
 };
 
-// function to handle answer event
 function forwardAnswer(socket, receivedPayload) {
     console.log("Received answer");
     receivedPayload = JSON.parse(receivedPayload);
 
-    // check if room exist
+    // kiem tra ton tai cua phong
     if (doesRoomExist(receivedPayload.roomId)) {
-        // forward answer in room
+      //nguoi goi nhan phan hoi tu nguoi nhan cuoc goi
         console.log("Room exists. forwarding answer");
         socket.to(receivedPayload.roomId).emit('answer', (JSON.stringify(receivedPayload)));
     } else {
@@ -112,10 +110,10 @@ function forwardAnswer(socket, receivedPayload) {
     };
 };
 
-// function to handle answer event
+
 function forwardIceCandidate(socket, receivedPayload) {
     receivedPayload = JSON.parse(receivedPayload);
-    //check if this room Id exists
+    //kiem tra ton tai id phong
     if ((allRooms.find(room => room.roomId == receivedPayload.roomId)) != undefined) {
         socket.to(receivedPayload.roomId).emit('remoteIceCandidate', (JSON.stringify(receivedPayload)));
     } else {
@@ -124,11 +122,11 @@ function forwardIceCandidate(socket, receivedPayload) {
     };
 };
 
-// call rejected or disconnected
+
 function endCall(socket, receivedPayload) {
     console.log("EndCall fiunction exexcuting");
     receivedPayload = JSON.parse(receivedPayload);
-    // check if room exists
+    // kiem tra phong co ton tai 
     if (doesRoomExist(receivedPayload.roomId)) {
         socket.to(receivedPayload.roomId).emit('rejected', JSON.stringify({message: 'Rejected'}));
         let thisUser = UTILS.getUserData(socket, onlineUsers);
@@ -139,22 +137,22 @@ function endCall(socket, receivedPayload) {
     };
 };
 
-// socket utility functions --------------------------------------- U T I L I T Y ---------
+
 function remove_member_from_room(roomid, thisMember) {
-    // get the roomid index in allRooms
+    // tim id phong hien tai
     let roomid_Index = allRooms.findIndex(room => room.roomId == roomid);
 
-    // get the index of thisMember in allRooms[roomid_Index]'s members list
+    // tim thanh vien trong phong
     let member_Index = allRooms[roomid_Index].members.findIndex(member => member == thisMember);
 
-    // update its member's list
+    // xoa thanh vien ra khoi phong
     allRooms[roomid_Index].members.splice(member_Index, 1);
     console.log(thisMember + " removed from a room");
 
-    // check if the room is empty
+    // kiem tra phong trong
     if (allRooms[roomid_Index].members.length < 1) {
         console.log("Room with id: " + allRooms[roomid_Index].roomId + " went silent. Deleting room..");
-        // delete this room id from allRooms record
+        // xoa phong
         allRooms.splice(roomid_Index, 1);
     };
 };
@@ -168,14 +166,14 @@ function doesRoomExist(id) {
 };
 
 function validateSocketConnection(socket, next) {
-    // check cookies / Authenticate user
+    // check cookies
     if (!socket.request.headers.cookie) {
         next(new Error("Not Authorised."));
     };
-    // parse cookies 
+    // xu ly cookies
     let cookies = socket.request.headers.cookie;
     cookies = COOKIE.parse(cookies);
-    // validate cookies
+    // kiem tra username
     if (!cookies.username) {
         console.log("Username not available in cookies. Rejecting socket connection.");
         socket.disconnect(true);
@@ -183,41 +181,43 @@ function validateSocketConnection(socket, next) {
     };
     next();
 };
+
 function disconnecting(socket) {
-    // get this user from onlineUser list
+    // tim nguoi dung dau trong onlineUSers
     let thisUser_Index = onlineUsers.findIndex(user => user.socket == socket);
     let thisUser = onlineUsers[thisUser_Index];
     console.log(thisUser.username + " disconnecting.");
 
-    // remove this member from the joined room if any
+    // kiem tra nguoi nay co tham gia khong va xoa ra khoi phong
     if (onlineUsers[thisUser_Index].roomJoined != null) {
         console.log("Removing "+thisUser.username+" from rooms.");
         remove_member_from_room(thisUser.roomJoined, thisUser.username);
     };
 
-    // remove this user from onlineUsers list
+    // xoa nguoi nay ra khoi danh sach dang truc tuyen
     onlineUsers.splice(thisUser_Index, 1);
     console.log(thisUser.username + " disconnected.");
 };
 
 function goOnline(socket) {
-    // parse raw cookies
+    
     let cookies = COOKIE.parse(socket.request.headers.cookie);
-    // add user into onlineUsers list
+    // khoi tao doi tuong nguoi dung
     let thisUser = {
         username: UTILS.validateString(cookies.username),
         socket: socket,
         roomJoined: null
     };
+    //them vao ds dang truc tuyen
     onlineUsers.push(thisUser);
     console.log(cookies.username + " connected");
-    // ack client that it is connected
+    // gui thong diep xac nhan cho client
     sendAck(socket, "Socket Connected.");
 
     return thisUser;
 };
 
-// function to send acknowledgement
+// gui thong diep toi client
 function sendAck(socket, ackMsg) {
     let ack = {
         status: UTILS.validateString(ackMsg)
