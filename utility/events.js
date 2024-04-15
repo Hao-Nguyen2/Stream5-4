@@ -143,7 +143,7 @@ function remove_member_from_room(roomid, thisMember) {
     let roomid_Index = allRooms.findIndex(room => room.roomId == roomid);
 
     // tim thanh vien trong phong
-    let member_Index = allRooms[roomid_Index].members.findIndex(member => member == thisMember);
+    let member_Index = allRooms[roomid_Index]?.members.findIndex(member => member == thisMember);
 
     // xoa thanh vien ra khoi phong
     allRooms[roomid_Index].members.splice(member_Index, 1);
