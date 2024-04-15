@@ -23,9 +23,9 @@ header {
 header > h1 {
     color: steelblue;
     font-size: 1.5em;
-    font-family: serif;
+    font-family: initial;
     letter-spacing: 0.1em;
-    font-variant: small-caps;
+    font-variant: all-small-caps;
 }
 
 header > a > button {
@@ -315,6 +315,4 @@ video {
     -webkit-transform: rotateY(180deg);
     transform: rotateY(180deg);
   }
-  
-
   
